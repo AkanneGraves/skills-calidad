@@ -242,22 +242,37 @@
             if(isAuthenticated && e.target.files.length) processFile(e.target.files[0]);
         });
 
+        // Motor de Exportación PNG Continuo (Corrección de Barra Gris y Corte de Registros)
         document.getElementById('btn-exportar-png').onclick = () => {
             if(!isAuthenticated) return;
+            
             const node = document.getElementById('detalle-curso-block');
             const scrollContainer = document.getElementById('contenedor-tabla-scroll');
+            
             const originalMaxHeight = scrollContainer.style.maxHeight;
-            const originalOverflow = scrollContainer.style.overflowY;
+            const originalOverflowY = scrollContainer.style.overflowY;
+            const originalOverflowX = scrollContainer.style.overflowX;
             const actionButtons = node.querySelector('.flex-wrap');
             
             scrollContainer.style.maxHeight = 'none';
             scrollContainer.style.overflowY = 'visible';
+            scrollContainer.style.overflowX = 'visible';
+            
             if(actionButtons) actionButtons.style.display = 'none';
 
-            domtoimage.toPng(node, { bgcolor: '#ffffff', quality: 1.0 })
+            setTimeout(() => {
+                domtoimage.toPng(node, { 
+                    bgcolor: '#ffffff', 
+                    quality: 1.0,
+                    style: {
+                        'overflow': 'visible',
+                        'height': 'auto'
+                    }
+                })
                 .then((dataUrl) => {
                     scrollContainer.style.maxHeight = originalMaxHeight;
-                    scrollContainer.style.overflowY = originalOverflow;
+                    scrollContainer.style.overflowY = originalOverflowY;
+                    scrollContainer.style.overflowX = originalOverflowX;
                     if(actionButtons) actionButtons.style.display = 'flex';
 
                     const link = document.createElement('a');
@@ -268,10 +283,12 @@
                 })
                 .catch((error) => {
                     scrollContainer.style.maxHeight = originalMaxHeight;
-                    scrollContainer.style.overflowY = originalOverflow;
+                    scrollContainer.style.overflowY = originalOverflowY;
+                    scrollContainer.style.overflowX = originalOverflowX;
                     if(actionButtons) actionButtons.style.display = 'flex';
                     console.error('Error al generar la imagen:', error);
                 });
+            }, 50);
         };
 
         function processFile(file) {
