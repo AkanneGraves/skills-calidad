@@ -199,16 +199,11 @@
     </div>
 
     <script>
-        // CONTROL NUCLEO DE SEGURIDAD PROTEGIDO
         let isAuthenticated = false;
-        // Representa de forma segura al PIN "2026" mediante inversión literal ofuscada
         const SECURE_TOKEN_AUTH = "NjIwMg=="; 
 
-        // Verificar PIN de manera infalible y lineal
         function verifyPIN() {
             const input = document.getElementById('pin-input').value.trim();
-            
-            // Invierte el input del usuario para validar contra el token estático de manera segura
             const processedInput = btoa(input.split("").reverse().join(""));
 
             if (processedInput === SECURE_TOKEN_AUTH) {
@@ -224,7 +219,6 @@
             }
         }
 
-        // Auto-login por recarga en la misma sesión
         window.addEventListener('DOMContentLoaded', () => {
             if (sessionStorage.getItem('portal_auth_secure_token') === SECURE_TOKEN_AUTH) {
                 isAuthenticated = true;
@@ -233,7 +227,6 @@
             }
         });
 
-        // ESTRUCTURA DE NEGOCIO ORIGINAL INTEGRADA Y PROTEGIDA
         let workbookData = {}; 
         let currentSheet = "";
         let currentCourse = "";
@@ -260,7 +253,6 @@
             if(isAuthenticated && e.target.files.length) processFile(e.target.files[0]);
         });
 
-        // Motor de Exportación PNG Continuo (Corrección de Barra Gris y Corte de Registros)
         document.getElementById('btn-exportar-png').onclick = () => {
             if(!isAuthenticated) return;
             
@@ -574,7 +566,7 @@
             document.getElementById('detalle-curso-block').scrollIntoView({ behavior: 'smooth' });
         }
 
-        // FUNCIÓN MEJORADA: CALCULA LAS MÉTRICAS EJECUTIVAS DINÁMICAMENTE EXCLUYENDO N/A
+        // FUNCIÓN FINAL: EXCLUYE DE FORMA ABSOLUTA LOS REGISTROS N/A DE LA VISTA Y DE LA EXPORTACIÓN
         function renderDetailedTable() {
             if(!isAuthenticated || !currentCourse) return;
             const tbody = document.getElementById('detalle-tabla-body');
@@ -586,7 +578,6 @@
             const { colNombre, colCorreo, colJefatura } = window.currentMeta;
             const originalName = window.currentCourseOriginalName;
 
-            // Inicializamos contadores locales para el cálculo dinámico
             let countInscritos = 0;
             let countFinalizados = 0;
             let countPendientes = 0;
@@ -600,6 +591,9 @@
                 let estadoOriginal = String(row[currentCourse] || '').trim();
                 let lowEstOriginal = estadoOriginal.toLowerCase();
 
+                // 🚫 FILTRO DE EXCLUSIÓN TOTAL: Si el estado es N/A, saltamos por completo el registro
+                if (lowEstOriginal === 'n/a') return;
+
                 let esPendienteOriginalmente = (lowEstOriginal === 'no' || lowEstOriginal === '0' || lowEstOriginal === 'pendiente' || lowEstOriginal === "");
                 
                 let fechaCompliance = "";
@@ -607,7 +601,6 @@
                     fechaCompliance = complianceDatabase[tecnicoMail]; 
                 }
 
-                // Filtrado por buscador y select de jefaturas
                 if(searchValue && !nombre.toLowerCase().includes(searchValue) && !correo.toLowerCase().includes(searchValue)) return;
                 if(filterJefaturaValue && jefatura !== filterJefaturaValue) return;
 
@@ -615,15 +608,10 @@
                 let textoMostrar = "";
                 let badgeClass = "";
 
-                if (lowEstOriginal === 'n/a') {
-                    badgeClass = "bg-slate-50 text-slate-400 border border-slate-200/60 font-medium";
-                    textoMostrar = "No Aplica";
-                } 
-                else if (esPendienteFinal) {
+                if (esPendienteFinal) {
                     badgeClass = "bg-rose-50 text-rose-600 border border-rose-200/50 font-bold";
                     textoMostrar = "Pendiente";
                     
-                    // Sumamos a métricas filtradas activas
                     countInscritos++;
                     countPendientes++;
                 } 
@@ -632,12 +620,10 @@
                     let mostrarDato = fechaCompliance || estadoOriginal;
                     textoMostrar = `Finalizado (${mostrarDato})`;
                     
-                    // Sumamos a métricas filtradas activas
                     countInscritos++;
                     countFinalizados++;
                 }
 
-                // Filtro checkbox exclusivo de pendientes
                 if (soloPendientes && !esPendienteFinal) return;
 
                 const tr = document.createElement('tr');
@@ -655,7 +641,6 @@
                 tbody.appendChild(tr);
             });
 
-            // Inyectamos los números calculados en los recuadros en tiempo real
             document.getElementById('metric-inscritos').textContent = countInscritos;
             document.getElementById('metric-finalizados').textContent = countFinalizados;
             document.getElementById('metric-pendientes').textContent = countPendientes;
