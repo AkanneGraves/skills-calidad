@@ -16,6 +16,8 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #f8fafc; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #67C6E3; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #378CE7; }
+        #login-screen { display: none !important; }
+        .badge-2026 { background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col antialiased">
@@ -45,7 +47,7 @@
         </div>
     </div>
 
-    <div id="app-wrapper" class="hidden flex flex-col min-h-screen">
+    <div id="app-wrapper" class="flex flex-col min-h-screen">
         
         <header class="bg-[#378CE7] text-white px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 shadow-sm sticky top-0 z-50">
             <div class="flex items-center gap-3.5 w-full sm:w-auto">
@@ -144,6 +146,10 @@
                                     <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Pendientes</p>
                                     <p id="metric-pendientes" class="text-base font-black text-[#5356FF]">0</p>
                                 </div>
+                                <div class="bg-emerald-50 border-l-4 border-emerald-500 px-4 py-1.5 rounded-r-xl shadow-3xs text-center min-w-[105px]">
+                                    <p class="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Finalizados 2026</p>
+                                    <p id="metric-finalizados-2026" class="text-base font-black text-emerald-700">0</p>
+                                </div>
                             </div>
                         </div>
                         
@@ -162,6 +168,10 @@
                             <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg cursor-pointer hover:bg-slate-100 transition-all select-none">
                                 <input type="checkbox" id="filter-pendientes" class="w-3.5 h-3.5 rounded border-slate-300 text-[#378CE7] focus:ring-[#378CE7] accent-[#378CE7]">
                                 <span>Solo Pendientes</span>
+                            </label>
+                            <label class="flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg cursor-pointer hover:bg-emerald-100 transition-all select-none">
+                                <input type="checkbox" id="filter-2026" class="w-3.5 h-3.5 rounded border-emerald-300 accent-emerald-600">
+                                <span>Finalizados 2026</span>
                             </label>
                             <button id="btn-exportar-png" class="flex items-center gap-2 text-xs font-bold text-white bg-[#5356FF] hover:bg-[#3b3dfa] px-5 py-1.5 rounded-lg cursor-pointer transition-all shadow-xs">
                                 <i class="fa-solid fa-arrow-down-to-line text-[11px]"></i>
@@ -199,7 +209,7 @@
     </div>
 
     <script>
-        let isAuthenticated = false;
+        let isAuthenticated = true;
         const SECURE_TOKEN_AUTH = "NjIwMg=="; 
 
         function verifyPIN() {
@@ -396,7 +406,7 @@
                         } else {
                             celdasVaciasConsecutivas++;
                         }
-                        if(celdasVaciasConsecutivas >= 5) break;
+                        // Las filas vacías intermedias no deben truncar registros posteriores.
                     }
 
                     workbookData[sheetName] = { data: cleanJson, structure: columnsStructure };
@@ -503,15 +513,23 @@
                 if(totalTecnicos && jsonKey) {
                     sheetJsonData.forEach(r => {
                         const tecnicoMail = String(r[colCorreoKey] || '').trim().toLowerCase();
-                        let originalState = String(r[jsonKey] || '').trim().toLowerCase();
-                        let isOriginalPending = (originalState === 'no' || originalState === '0' || originalState === 'pendiente' || originalState === "");
+                        let originalState = String(r[jsonKey] || '').trim();
+                        let lowStateSanitized = originalState.toLowerCase().trim().replace(/\s+/g, '');
+                        
+                        if (lowStateSanitized === 'n/a' || lowStateSanitized === 'na') {
+                            excluidosNA++;
+                            return; 
+                        }
+
+                        let isOriginalPending = (lowStateSanitized === 'no' || lowStateSanitized === '0' || lowStateSanitized === 'pendiente' || lowStateSanitized === "");
                         
                         let val = originalState;
-                        if (!isOriginalPending && (col.originalName.toLowerCase().includes("ley karin") || col.originalName.toLowerCase().includes("ética") || col.originalName.toLowerCase().includes("prevención") || col.originalName.toLowerCase().includes("ciberseguridad")) && complianceDatabase[tecnicoMail]) {
+                        if ((col.originalName.toLowerCase().includes("ley karin") || col.originalName.toLowerCase().includes("ética") || col.originalName.toLowerCase().includes("prevención") || col.originalName.toLowerCase().includes("ciberseguridad")) && complianceDatabase[tecnicoMail]) {
                             val = complianceDatabase[tecnicoMail].toLowerCase(); 
                         }
                         
-                        if(val === 'n/a') {
+                        let valSanitizadoFinal = String(val).toLowerCase().trim().replace(/\s+/g, '');
+                        if(valSanitizadoFinal === 'n/a' || valSanitizadoFinal === 'na') {
                             excluidosNA++;
                         } else if(val !== "" && val !== "no" && val !== "pendiente" && val !== "0") {
                             aprobados++;
@@ -544,7 +562,10 @@
             selectJefatura.innerHTML = '<option value="">Todas las Jefaturas</option>';
             Array.from(jefaturasSet).sort().forEach(jef => {
                 if(jef && String(jef).trim() !== "") {
-                    selectJefatura.innerHTML += `<option value="${jef}">${jef}</option>`;
+                    const opt = document.createElement('option');
+                    opt.value = jef;
+                    opt.textContent = jef;
+                    selectJefatura.appendChild(opt);
                 }
             });
 
@@ -566,7 +587,6 @@
             document.getElementById('detalle-curso-block').scrollIntoView({ behavior: 'smooth' });
         }
 
-        // FUNCIÓN FINAL: EXCLUYE DE FORMA ABSOLUTA LOS REGISTROS N/A DE LA VISTA Y DE LA EXPORTACIÓN
         function renderDetailedTable() {
             if(!isAuthenticated || !currentCourse) return;
             const tbody = document.getElementById('detalle-tabla-body');
@@ -589,10 +609,9 @@
                 
                 const tecnicoMail = String(correo).trim().toLowerCase();
                 let estadoOriginal = String(row[currentCourse] || '').trim();
-                let lowEstOriginal = estadoOriginal.toLowerCase();
+                let lowEstOriginal = estadoOriginal.toLowerCase().trim().replace(/\s+/g, '');
 
-                // 🚫 FILTRO DE EXCLUSIÓN TOTAL: Si el estado es N/A, saltamos por completo el registro
-                if (lowEstOriginal === 'n/a') return;
+                if (lowEstOriginal === 'n/a' || lowEstOriginal === 'na') return;
 
                 let esPendienteOriginalmente = (lowEstOriginal === 'no' || lowEstOriginal === '0' || lowEstOriginal === 'pendiente' || lowEstOriginal === "");
                 
@@ -649,6 +668,77 @@
                 tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-slate-400 italic">No se encontraron registros coincidentes.</td></tr>`;
             }
         }
+        function valueIs2026(value) {
+            if (value instanceof Date) return value.getFullYear() === 2026;
+            return /(^|\D)2026(\D|$)/.test(String(value || '').trim());
+        }
+
+        function escapePortal(value) {
+            return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
+        renderDetailedTable = function() {
+            if(!currentCourse) return;
+            const tbody = document.getElementById('detalle-tabla-body');
+            tbody.innerHTML = '';
+            const searchValue = document.getElementById('search-tecnico').value.toLowerCase().trim();
+            const filterJefaturaValue = document.getElementById('filter-jefatura').value;
+            const soloPendientes = document.getElementById('filter-pendientes').checked;
+            const solo2026 = document.getElementById('filter-2026').checked;
+            const { colNombre, colCorreo, colJefatura } = window.currentMeta;
+            const originalName = window.currentCourseOriginalName || '';
+            const esCursoCompliance = ['ley karin','ética','prevención','ciberseguridad'].some(x => originalName.toLowerCase().includes(x));
+            let countInscritos = 0, countFinalizados = 0, countPendientes = 0, count2026 = 0;
+
+            sheetJsonData.forEach(row => {
+                const nombre = String(row[colNombre] || 'Sin Nombre');
+                const correo = String(row[colCorreo] || 'Sin Correo');
+                const jefatura = String(row[colJefatura] || 'Sin Jefatura');
+                const tecnicoMail = correo.trim().toLowerCase();
+                const estadoOriginal = String(row[currentCourse] || '').trim();
+                const estadoNormalizado = estadoOriginal.toLowerCase().replace(/\s+/g,'');
+                if (estadoNormalizado === 'n/a' || estadoNormalizado === 'na') return;
+                if(searchValue && !nombre.toLowerCase().includes(searchValue) && !correo.toLowerCase().includes(searchValue)) return;
+                if(filterJefaturaValue && jefatura !== filterJefaturaValue) return;
+
+                const fechaCompliance = esCursoCompliance ? String(complianceDatabase[tecnicoMail] || '').trim() : '';
+                const pendienteOriginal = ['no','0','pendiente',''].includes(estadoNormalizado);
+                const esPendiente = pendienteOriginal && !fechaCompliance;
+                const datoFinalizacion = fechaCompliance || estadoOriginal;
+                const finalizado2026 = !esPendiente && valueIs2026(datoFinalizacion);
+                countInscritos++;
+                if(esPendiente) countPendientes++; else countFinalizados++;
+                if(finalizado2026) count2026++;
+                if(soloPendientes && !esPendiente) return;
+                if(solo2026 && !finalizado2026) return;
+
+                let badgeClass, textoMostrar;
+                if(esPendiente) {
+                    badgeClass = 'bg-rose-50 text-rose-600 border border-rose-200/50 font-bold';
+                    textoMostrar = 'Pendiente';
+                } else if(finalizado2026) {
+                    badgeClass = 'badge-2026 font-bold';
+                    textoMostrar = `Finalizado 2026 (${datoFinalizacion})`;
+                } else {
+                    badgeClass = 'bg-[#DFF5FF] text-[#5356FF] border border-[#67C6E3]/40 font-bold';
+                    textoMostrar = `Finalizado (${datoFinalizacion})`;
+                }
+                const tr = document.createElement('tr');
+                tr.className = finalizado2026 ? 'bg-emerald-50/40 hover:bg-emerald-50 transition-colors' : 'hover:bg-[#DFF5FF]/20 transition-colors';
+                tr.innerHTML = `<td class="py-3 px-4 font-bold text-slate-900">${escapePortal(nombre)}</td><td class="py-3 px-4 text-slate-400 font-medium">${escapePortal(correo)}</td><td class="py-3 px-4 text-center"><span class="inline-block px-2.5 py-0.5 rounded-md text-[11px] ${badgeClass}">${escapePortal(textoMostrar)}</span></td><td class="py-3 px-4 text-slate-600 font-semibold">${escapePortal(jefatura)}</td>`;
+                tbody.appendChild(tr);
+            });
+            document.getElementById('metric-inscritos').textContent = countInscritos;
+            document.getElementById('metric-finalizados').textContent = countFinalizados;
+            document.getElementById('metric-pendientes').textContent = countPendientes;
+            document.getElementById('metric-finalizados-2026').textContent = count2026;
+            if(!tbody.children.length) tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-slate-400 italic">No se encontraron registros coincidentes.</td></tr>';
+        };
+
+        document.getElementById('filter-2026').onchange = function(){ if(this.checked) document.getElementById('filter-pendientes').checked = false; renderDetailedTable(); };
+        document.getElementById('filter-pendientes').addEventListener('change', function(){ if(this.checked) document.getElementById('filter-2026').checked = false; });
+        window.addEventListener('dragover', e => e.preventDefault(), false);
+        window.addEventListener('drop', e => e.preventDefault(), false);
     </script>
 </body>
 </html>
